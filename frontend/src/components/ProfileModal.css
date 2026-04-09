@@ -1,0 +1,134 @@
+.profile-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 1000;
+}
+.profile-modal-content {
+  background: white;
+  width: 90%; max-width: 400px;
+  border-radius: 8px; padding: 20px;
+}
+.profile-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;
+}
+.profile-view-body {
+  text-align: center;
+}
+.profile-avatar-large {
+  width: 100px; height: 100px; border-radius: 50%;
+  object-fit: cover; margin-bottom: 10px;
+}
+.profile-username {
+  color: #333; font-size: 20px; margin: 0 0 5px 0;
+}
+.profile-fullname {
+  color: #666; font-size: 16px; margin: 0 0 10px 0;
+}
+.profile-status-badge {
+  background: #e1f5fe; color: #128c7e;
+  padding: 5px 10px; border-radius: 15px;
+  display: inline-block; font-size: 12px; margin-bottom: 15px;
+}
+.profile-bio {
+  color: #444; font-style: italic; margin-bottom: 15px;
+}
+.profile-date {
+  color: #999; font-size: 12px; margin-bottom: 20px;
+}
+.edit-profile-btn, .send-message-btn {
+  background: #128c7e; color: white; border: none;
+  padding: 8px 16px; border-radius: 4px; cursor: pointer;
+}
+.send-message-btn {
+  width: 100%;
+  font-weight: bold;
+}
+.avatar-selection {
+  display: flex; gap: 10px; margin-bottom: 15px;
+}
+.avatar-selection.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.avatar-option {
+  width: 50px; height: 50px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent;
+}
+.avatar-option.selected {
+  border-color: #128c7e;
+}
+.form-group {
+  margin-bottom: 15px; text-align: left;
+}
+.form-group label {
+  display: block; margin-bottom: 5px; color: #555;
+}
+.form-group input, .form-group textarea {
+  width: 100%; padding: 8px; border: 1px solid #ccc;
+  border-radius: 4px; box-sizing: border-box;
+}
+.profile-actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.save-btn { background: #128c7e; color: white; border: none; padding: 6px 12px; border-radius: 4px; }
+.cancel-btn { background: #ccc; border: none; padding: 6px 12px; border-radius: 4px; }
+
+.avatar-edit-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.current-avatar-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-avatar-btn {
+  background: #f0f2f5;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+  transition: background 0.2s;
+}
+
+.edit-avatar-btn:hover {
+  background: #e2e5e9;
+}
+
+.avatar-selection-dropdown {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 10px;
+  width: 100%;
+}
+
+.avatar-selection-dropdown label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.grid-5 .avatar-option {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
