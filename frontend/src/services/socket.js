@@ -2,7 +2,7 @@ import io from 'socket.io-client';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL ? process.env.REACT_APP_SOCKET_URL.replace("localhost", window.location.hostname) : `http://${window.location.hostname}:5001`;
 
-let socket = null;
+const socket = io("https://deshichat-backend.onrender.com");
 
 export const connectSocket = (userId) => {
   if (!socket) {

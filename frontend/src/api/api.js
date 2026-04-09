@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace("localhost", window.location.hostname) : `http://${window.location.hostname}:5001/api`;
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: "https://deshichat-backend.onrender.com/api",
   headers: {
     'Content-Type': 'application/json'
   }
