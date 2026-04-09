@@ -25,8 +25,13 @@ const io = socketIO(server, {
 });
 
 // Middleware
+const cors = require("cors");
+
 app.use(cors({
-  origin: true,
+  origin: [
+    "http://localhost:3000",
+    "https://deshichat.vercel.app"
+  ],
   credentials: true
 }));
 app.use(express.json());
