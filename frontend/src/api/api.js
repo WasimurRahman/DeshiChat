@@ -2,12 +2,35 @@ import axios from 'axios';
 
 //const API_URL = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace("localhost", window.location.hostname) : `http://${window.location.hostname}:5001/api`;
 
+const API_BASE_URL = "https://deshichat-backend.onrender.com/api";
+const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
+
 const api = axios.create({
-  baseURL: "https://deshichat-backend.onrender.com/api",
+  baseURL: API_BASE_URL,
+  timeout: DEFAULT_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const pingBackend = async ({ retries = 2, delayMs = 2000 } = {}) => {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      await api.get('/health', {
+        timeout: 10000,
+        // Health checks do not need auth headers.
+        headers: { Authorization: undefined }
+      });
+      return true;
+    } catch (error) {
+      if (attempt === retries) return false;
+      await wait(delayMs);
+    }
+  }
+  return false;
+};
 
 // Add token to requests
 api.interceptors.request.use(

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI } from '../api/api';
+import { authAPI, pingBackend } from '../api/api';
 import { connectSocket, disconnectSocket } from '../services/socket';
 
 const AuthContext = createContext();
@@ -39,6 +39,10 @@ export const AuthProvider = ({ children }) => {
       if (storedToken && !isTokenExpired(storedToken)) {
         try {
           setToken(storedToken);
+
+          // Render free instances can be asleep; wake backend before auth check.
+          await pingBackend({ retries: 2, delayMs: 2500 });
+
           const response = await authAPI.getCurrentUser();
           setUser(response.data);
           connectSocket(response.data._id);
@@ -53,6 +57,9 @@ export const AuthProvider = ({ children }) => {
             setToken(null);
             setUser(null);
             disconnectSocket();
+          } else {
+            // For transient startup/network failures, show app instead of infinite loader.
+            setUser(null);
           }
         }
       } else if (storedToken && isTokenExpired(storedToken)) {
