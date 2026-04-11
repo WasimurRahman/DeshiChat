@@ -124,7 +124,7 @@ exports.signup = async (req, res) => {
         await User.findByIdAndDelete(user._id);
       }
       console.error('Signup email error:', mailError);
-      return res.status(503).json({ message: 'Unable to send OTP right now. Please try signup again in a moment.' });
+      return res.status(503).json({ message: 'Unable to send OTP email right now. Please try again shortly.' });
     }
 
     res.status(201).json({ message: 'Registration successful. Please verify your email.', requiresVerification: true, email: normalizedEmail });

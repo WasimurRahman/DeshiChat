@@ -28,7 +28,7 @@ const isTokenExpired = (token) => {
 const mapAuthError = (error) => {
   if (error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')) {
     return {
-      message: 'Server is waking up. Please wait a few seconds and try again.'
+      message: 'Request timed out. The server or OTP email service may be slow. Please try again.'
     };
   }
 
