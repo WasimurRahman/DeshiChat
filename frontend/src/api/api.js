@@ -1,8 +1,20 @@
 import axios from 'axios';
 
-//const API_URL = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace("localhost", window.location.hostname) : `http://${window.location.hostname}:5001/api`;
+const resolveApiBaseUrl = () => {
+  const envUrl = process.env.REACT_APP_API_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim();
+  }
 
-const API_BASE_URL = "https://deshichat-backend.onrender.com/api";
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isLocalHost) {
+    return 'http://localhost:5001/api';
+  }
+
+  return 'https://deshichat-backend.onrender.com/api';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
 const AUTH_REQUEST_TIMEOUT_MS = 45000;
 

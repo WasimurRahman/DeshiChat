@@ -13,23 +13,37 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://deshichat.vercel.app'
+];
+
+const isAllowedOrigin = (origin = '') => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+
+  // Allow Vercel preview URLs for this project.
+  return /https:\/\/deshichat-.*\.vercel\.app$/.test(origin);
+};
+
 const io = socketIO(server, {
   cors: {
-    /*
-    origin: true,
-    credentials: true
-    */
-    origin: "*",
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
     methods: ["GET", "POST"]
   }
 });
 
 // Middleware
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://deshichat.vercel.app"
-  ],
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());

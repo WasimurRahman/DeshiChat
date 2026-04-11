@@ -1,8 +1,22 @@
 import io from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL ? process.env.REACT_APP_SOCKET_URL.replace("localhost", window.location.hostname) : `http://${window.location.hostname}:5001`;
+const resolveSocketUrl = () => {
+  const envUrl = process.env.REACT_APP_SOCKET_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim();
+  }
 
-let socket = io("https://deshichat-backend.onrender.com");
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isLocalHost) {
+    return 'http://localhost:5001';
+  }
+
+  return 'https://deshichat-backend.onrender.com';
+};
+
+const SOCKET_URL = resolveSocketUrl();
+
+let socket = null;
 
 export const connectSocket = (userId) => {
   if (!socket) {
