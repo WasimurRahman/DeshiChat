@@ -52,7 +52,7 @@ app.use('/api/users', searchLimiter, require('./routes/userRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Server is running' });
+  res.status(200).send('OK');
 });
 
 // Socket.io for real-time messaging
@@ -247,8 +247,17 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+
+  // warmup ping
+  try {
+    const axios = require("axios");
+    await axios.get("https://deshichat-backend.onrender.com/api/health");
+    console.log("Warmup request completed");
+  } catch (err) {
+    console.log("Warmup request failed");
+  }
 });
 
 /*
