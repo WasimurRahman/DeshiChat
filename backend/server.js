@@ -23,8 +23,8 @@ const isAllowedOrigin = (origin = '') => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
 
-  // Allow Vercel preview URLs for this project.
-  return /https:\/\/deshichat-.*\.vercel\.app$/.test(origin);
+  // Allow Vercel deployment URLs (preview/alias/prod under vercel.app).
+  return /https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
 };
 
 const io = socketIO(server, {

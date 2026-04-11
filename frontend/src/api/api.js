@@ -1,12 +1,21 @@
 import axios from 'axios';
 
 const resolveApiBaseUrl = () => {
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
   const envUrl = process.env.REACT_APP_API_URL;
+
   if (envUrl && envUrl.trim()) {
-    return envUrl.trim();
+    const normalizedEnvUrl = envUrl.trim();
+    const envLooksLocal = /localhost|127\.0\.0\.1/.test(normalizedEnvUrl);
+
+    // Prevent misconfigured production builds from pointing at localhost.
+    if (!isLocalHost && envLooksLocal) {
+      return 'https://deshichat-backend.onrender.com/api';
+    }
+
+    return normalizedEnvUrl;
   }
 
-  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
   if (isLocalHost) {
     return 'http://localhost:5001/api';
   }
