@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI, pingBackend } from '../api/api';
+import { authAPI } from '../api/api';
 import { connectSocket, disconnectSocket } from '../services/socket';
 
 const AuthContext = createContext();
@@ -26,12 +26,6 @@ const isTokenExpired = (token) => {
 };
 
 const mapAuthError = (error) => {
-  if (error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')) {
-    return {
-      message: 'Request timed out. The server or OTP email service may be slow. Please try again.'
-    };
-  }
-
   if (!error?.response) {
     return {
       message: 'Network error. Please check your internet and try again.'
@@ -59,9 +53,6 @@ export const AuthProvider = ({ children }) => {
       if (storedToken && !isTokenExpired(storedToken)) {
         try {
           setToken(storedToken);
-
-          // Render free instances can be asleep; wake backend before auth check.
-          await pingBackend({ retries: 2, delayMs: 2500 });
 
           const response = await authAPI.getCurrentUser();
           setUser(response.data);
@@ -98,23 +89,6 @@ export const AuthProvider = ({ children }) => {
   const signup = async (username, email, password, confirmPassword) => {
     try {
       const response = await authAPI.signup(username, email, password, confirmPassword);
-      if (response.data.requiresVerification) {
-        return response.data;
-      }
-      const { token: newToken, user: newUser } = response.data;
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(newUser);
-      connectSocket(newUser._id);
-      return newUser;
-    } catch (error) {
-      throw mapAuthError(error);
-    }
-  };
-
-  const verifyOTP = async (email, otp) => {
-    try {
-      const response = await authAPI.verifyOTP(email, otp);
       const { token: newToken, user: newUser } = response.data;
       localStorage.setItem('token', newToken);
       setToken(newToken);
@@ -163,7 +137,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (newUserData) => setUser({ ...user, ...newUserData });
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, signup, signin, verifyOTP, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, loading, signup, signin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

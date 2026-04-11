@@ -23,11 +23,11 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Signup/OTP limiter - allow retries for cold starts and delivery issues
+// Signup limiter
 const signupLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: 'Too many signup or OTP attempts. Please try again after 15 minutes.',
+  message: 'Too many signup attempts. Please try again after 15 minutes.',
   skipSuccessfulRequests: true, // Don't count successful requests
   standardHeaders: true,
   legacyHeaders: false

@@ -28,13 +28,6 @@ const ProfileModal = ({ userId, currentUserId, onClose, onProfileUpdate, onlineU
   const [editForm, setEditForm] = useState({});
   const [showAvatarOptions, setShowAvatarOptions] = useState(false);
 
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [resetOTP, setResetOTP] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [resetStatus, setResetStatus] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
-
   const getDynamicAvatar = () => {
     if (!profile) return 'https://ui-avatars.com/api/?name=User&background=random';
     const nameStr = profile.username || 'User';
@@ -109,41 +102,6 @@ const ProfileModal = ({ userId, currentUserId, onClose, onProfileUpdate, onlineU
     return 'Active more than a day ago';
   };
 
-  const handleRequestPasswordReset = async () => {
-    if (!profile?.email) return;
-    try {
-      setResetLoading(true);
-      setResetStatus('');
-      const { authAPI } = require('../api/api');
-      await authAPI.forgotPassword(profile.email);
-      setIsResettingPassword(true);
-      setResetStatus('OTP sent to your email.');
-    } catch (err) {
-      setResetStatus(err.response?.data?.message || 'Failed to send OTP.');
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const handleConfirmPasswordReset = async () => {
-    if (newPassword !== confirmNewPassword) {
-      setResetStatus('Passwords do not match.');
-      return;
-    }
-    
-    try {
-      setResetLoading(true);
-      setResetStatus('');
-      const { authAPI } = require('../api/api');
-      await authAPI.resetPassword(profile.email, resetOTP, newPassword);
-      setResetStatus('Password successfully updated!');
-      setTimeout(() => { setIsResettingPassword(false); setResetStatus(''); setResetOTP(''); setNewPassword(''); setConfirmNewPassword(''); }, 2000);
-    } catch (err) {
-      setResetStatus(err.response?.data?.message || 'Failed to reset password.');
-    } finally {
-      setResetLoading(false);
-    }
-  };
 
   return (
     <div className="profile-modal-overlay" onClick={(e) => e.target.className === 'profile-modal-overlay' && onClose()}>
@@ -241,28 +199,6 @@ const ProfileModal = ({ userId, currentUserId, onClose, onProfileUpdate, onlineU
                   Send Message
                 </button>
               )}
-            {isOwnProfile && isResettingPassword ? (
-              <div className="reset-password-section" style={{ marginTop: '20px', borderTop: '1px solid #ddd', paddingTop: '15px' }}>
-                <h4 style={{ marginBottom: '10px', fontSize: '1rem', color: '#00a884' }}>Reset Password</h4>
-                {resetStatus && <p style={{ fontSize: '0.85rem', color: resetStatus.includes('success') ? '#00a884' : 'red', marginBottom: '10px', textAlign: 'left' }}>{resetStatus}</p>}
-                <input type="text" placeholder="Enter 6-digit OTP" value={resetOTP} onChange={(e) => setResetOTP(e.target.value)} maxLength="6" style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center', letterSpacing: '2px', fontSize: '1.1rem' }} />
-                <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1rem' }} />
-                <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1rem' }} />
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={handleConfirmPasswordReset} disabled={resetLoading} style={{ flex: 1, background: '#00a884', color: '#fff', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' }}>{resetLoading ? '...' : 'Confirm'}</button>
-                  <button onClick={() => setIsResettingPassword(false)} style={{ flex: 1, background: '#f0f2f5', border: '1px solid #ccc', padding: '8px', borderRadius: '4px', cursor: 'pointer', color: '#333' }}>Cancel</button>
-                </div>
-              </div>
-            ) : isOwnProfile && (
-              <button 
-                className="reset-password-btn" 
-                onClick={handleRequestPasswordReset} 
-                disabled={resetLoading}
-                style={{ marginTop: '10px', width: '100%', background: 'transparent', color: '#00a884', border: '1px solid #00a884', padding: '10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                {resetLoading ? 'Sending OTP...' : 'Reset Password'}
-              </button>
-            )}
           </div>
         )}
       </div>

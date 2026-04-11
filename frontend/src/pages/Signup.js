@@ -16,11 +16,9 @@ const Signup = () => {
   const [emailStatus, setEmailStatus] = useState(null); // 'checking', 'available', 'taken', null
   const [emailMessage, setEmailMessage] = useState('');
   const emailDebounceRef = useRef(null);
-  const [step, setStep] = useState('details'); // 'details' or 'otp'
-  const [otp, setOtp] = useState('');
   const debounceRef = useRef(null);
 
-  const { signup, verifyOTP } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
   const parseErrorMessage = (err, fallback) => {
@@ -120,33 +118,10 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      if (step === 'details') {
-        const response = await signup(username, email, password, confirmPassword);
-        if (response?.requiresVerification) {
-          setStep('otp');
-          setError(''); // clear previous errors
-        } else {
-          navigate('/'); // Fallback if no verification is somehow returned
-        }
-      } else if (step === 'otp') {
-        await verifyOTP(email, otp);
-        navigate('/');
-      }
+      await signup(username, email, password, confirmPassword);
+      navigate('/');
     } catch (err) {
       setError(parseErrorMessage(err, 'Action failed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      await authAPI.resendOTP(email);
-      setError('A new OTP has been sent successfully.');
-    } catch (err) {
-      setError(parseErrorMessage(err, 'Failed to resend OTP'));
     } finally {
       setLoading(false);
     }
@@ -159,43 +134,11 @@ const Signup = () => {
           <img src="/logo.png" alt="DeshiChat Logo" style={{ height: 'auto', width: 'auto', maxHeight: '80px', maxWidth: '30%', objectFit: 'contain' }} />
           <img src="/site_name.jpg" alt="DeshiChat Name" style={{ height: 'auto', width: 'auto', maxHeight: '80px', maxWidth: '65%', objectFit: 'contain' }} />
         </div>
-        {step === 'details' && <h2>Sign Up</h2>}
-        {step === 'otp' && <h2>Verify Email</h2>}
+        <h2>Sign Up</h2>
 
         {error && <div className="error-message">{error}</div>}
 
-        {step === 'otp' ? (
-          <>
-            <p style={{ textAlign: 'center' }}>An OTP code has been sent to <strong>{email}</strong>. Please enter it below to verify your account.</p>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>OTP Code</label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter 6-digit OTP"
-                  required
-                  maxLength="6"
-                  style={{ textAlign: 'center', letterSpacing: '2px', fontSize: '1.2rem' }}
-                />
-              </div>
-              <button type="submit" disabled={loading}>
-                {loading ? 'Verifying...' : 'Verify OTP & Login'}
-              </button>
-              <button 
-                type="button" 
-                onClick={handleResendOTP} 
-                disabled={loading} 
-                className="resend-btn"
-                style={{ marginTop: '10px', background: 'transparent', color: '#00a884', border: '1px solid #00a884' }}
-              >
-                Resend OTP
-              </button>
-            </form>
-          </>
-        ) : (
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Username</label>
             <div className="input-wrapper" style={{ position: 'relative' }}>
@@ -266,7 +209,6 @@ const Signup = () => {
             {loading ? 'Signing up...' : 'Sign Up'}
           </button>
         </form>
-        )}
 
         <p className="auth-link">
           Already have an account? <Link to="/login">Sign In</Link>

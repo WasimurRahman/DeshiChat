@@ -25,7 +25,6 @@ const resolveApiBaseUrl = () => {
 
 const API_BASE_URL = resolveApiBaseUrl();
 const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
-const AUTH_REQUEST_TIMEOUT_MS = 45000;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -34,53 +33,6 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export const pingBackend = async ({ retries = 2, delayMs = 2000 } = {}) => {
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    try {
-      await api.get('/health', {
-        timeout: 10000,
-        // Health checks do not need auth headers.
-        headers: { Authorization: undefined }
-      });
-      return true;
-    } catch (error) {
-      if (attempt === retries) return false;
-      await wait(delayMs);
-    }
-  }
-  return false;
-};
-
-const isTransientError = (error) => {
-  const status = error?.response?.status;
-  return (
-    error?.code === 'ECONNABORTED' ||
-    !error?.response ||
-    status === 502 ||
-    status === 504
-  );
-};
-
-const performAuthRequest = async (requestFn, { retries = 1, wakeRetries = 2 } = {}) => {
-  await pingBackend({ retries: wakeRetries, delayMs: 2500 });
-
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    try {
-      return await requestFn();
-    } catch (error) {
-      if (!isTransientError(error) || attempt === retries) {
-        throw error;
-      }
-      await wait(2000);
-      await pingBackend({ retries: 1, delayMs: 1500 });
-    }
-  }
-
-  throw new Error('Request failed');
-};
 
 // Add token to requests
 api.interceptors.request.use(
@@ -106,57 +58,17 @@ api.interceptors.response.use(
 // Auth API calls
 export const authAPI = {
   signup: (username, email, password, confirmPassword) =>
-    performAuthRequest(() => api.post(
-      '/auth/signup',
-      { username, email, password, confirmPassword },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS }
-    )),
-  verifyOTP: (email, otp) =>
-    performAuthRequest(() => api.post(
-      '/auth/verify-otp',
-      { email, otp },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS }
-    )),
-  resendOTP: (email) =>
-    performAuthRequest(() => api.post(
-      '/auth/resend-otp',
-      { email },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS }
-    )),
-  forgotPassword: (email) =>
-    performAuthRequest(() => api.post(
-      '/auth/forgot-password',
-      { email },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS }
-    )),
-  resetPassword: (email, otp, newPassword) =>
-    performAuthRequest(() => api.post(
-      '/auth/reset-password',
-      { email, otp, newPassword },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS }
-    )),
+    api.post('/auth/signup', { username, email, password, confirmPassword }),
   checkUsername: (username) =>
-    performAuthRequest(() => api.post(
-      '/auth/check-username',
-      { username },
-      { timeout: 20000 }
-    )),
+    api.post('/auth/check-username', { username }),
   checkEmail: (email) =>
-    performAuthRequest(() => api.post(
-      '/auth/check-email',
-      { email },
-      { timeout: 20000 }
-    )),
+    api.post('/auth/check-email', { email }),
   signin: (email, password, rememberMe = false) =>
-    performAuthRequest(() => api.post(
-      '/auth/signin',
-      { email, password, rememberMe },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS }
-    )),
+    api.post('/auth/signin', { email, password, rememberMe }),
   logout: () =>
     api.post('/auth/logout'),
   getCurrentUser: () =>
-    performAuthRequest(() => api.get('/auth/me', { timeout: 25000 }), { retries: 0, wakeRetries: 1 })
+    api.get('/auth/me')
 };
 
 // Message API calls
