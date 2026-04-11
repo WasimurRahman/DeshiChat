@@ -3,6 +3,7 @@ const dns = require('dns');
 
 const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 12000);
 const SMTP_RETRIES = Number(process.env.SMTP_RETRIES || 1);
+const BREVO_API_RETRIES = Number(process.env.BREVO_API_RETRIES || 1);
 
 // Render frequently fails on IPv6 SMTP routes; prefer IPv4 results.
 if (typeof dns.setDefaultResultOrder === 'function') {
@@ -59,6 +60,39 @@ const sendWithTimeout = async (transporter, mailOptions) => {
   ]);
 };
 
+const sendViaBrevoApi = async ({ to, subject, text, html, fromEmail }) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), EMAIL_TIMEOUT_MS);
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: {
+          name: 'DeshiChat',
+          email: fromEmail
+        },
+        to: [{ email: to }],
+        subject,
+        textContent: text,
+        htmlContent: html
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(`Brevo API failed: ${response.status} ${details}`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 const sendEmail = async ({ to, subject, text, html }) => {
   if (!primaryConfig.user || !primaryConfig.pass) {
     throw new Error('Email credentials are not configured');
@@ -72,6 +106,25 @@ const sendEmail = async ({ to, subject, text, html }) => {
     text,
     html
   };
+
+  if (process.env.BREVO_API_KEY) {
+    let brevoLastError = null;
+
+    for (let attempt = 1; attempt <= BREVO_API_RETRIES; attempt += 1) {
+      try {
+        await sendViaBrevoApi({ to, subject, text, html, fromEmail });
+        return;
+      } catch (error) {
+        brevoLastError = error;
+        console.error(`Email send failed (brevo-api) attempt ${attempt}/${BREVO_API_RETRIES}:`, error.message);
+      }
+    }
+
+    // Fall back to SMTP if API path fails.
+    if (brevoLastError) {
+      console.error('Brevo API path failed, trying SMTP fallback.');
+    }
+  }
 
   let lastError = null;
 

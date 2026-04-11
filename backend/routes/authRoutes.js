@@ -15,5 +15,6 @@ router.post('/check-email', authController.checkEmail);
 router.post('/signin', authLimiter, authController.signin);
 router.post('/logout', authMiddleware, authController.logout);
 router.get('/me', authMiddleware, authController.getCurrentUser);
+router.post('/email-test', authLimiter, authController.testEmailDelivery);
 
 module.exports = router;

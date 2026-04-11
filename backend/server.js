@@ -14,6 +14,9 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+// Render runs behind a reverse proxy; trust first proxy for real client IP.
+app.set('trust proxy', 1);
+
 const allowedOrigins = [
   'http://localhost:3000',
   'https://deshichat.vercel.app'

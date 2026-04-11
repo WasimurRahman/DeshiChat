@@ -303,3 +303,35 @@ exports.getCurrentUser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Email delivery health check (manual diagnostic)
+exports.testEmailDelivery = async (req, res) => {
+  try {
+    const expectedSecret = process.env.EMAIL_TEST_SECRET;
+    const providedSecret = req.headers['x-email-test-secret'];
+
+    if (!expectedSecret) {
+      return res.status(503).json({ message: 'Email diagnostics are not configured' });
+    }
+
+    if (!providedSecret || providedSecret !== expectedSecret) {
+      return res.status(401).json({ message: 'Unauthorized email diagnostic request' });
+    }
+
+    const recipient = (req.body?.email || process.env.EMAIL_USER || '').toLowerCase().trim();
+    if (!recipient || !validator.isEmail(recipient)) {
+      return res.status(400).json({ message: 'A valid recipient email is required' });
+    }
+
+    await sendEmail({
+      to: recipient,
+      subject: 'DeshiChat Email Diagnostic',
+      text: `DeshiChat email diagnostic successful at ${new Date().toISOString()}.`
+    });
+
+    return res.json({ message: 'Diagnostic email sent successfully', recipient });
+  } catch (error) {
+    console.error('Email diagnostic error:', error);
+    return res.status(503).json({ message: 'Email diagnostic failed', error: error.message });
+  }
+};
