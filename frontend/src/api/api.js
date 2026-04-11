@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const API_BASE_URL = "https://deshichat-backend.onrender.com/api";
 const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
+const AUTH_REQUEST_TIMEOUT_MS = 45000;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -32,6 +33,35 @@ export const pingBackend = async ({ retries = 2, delayMs = 2000 } = {}) => {
   return false;
 };
 
+const isTransientError = (error) => {
+  const status = error?.response?.status;
+  return (
+    error?.code === 'ECONNABORTED' ||
+    !error?.response ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
+};
+
+const performAuthRequest = async (requestFn, { retries = 1, wakeRetries = 2 } = {}) => {
+  await pingBackend({ retries: wakeRetries, delayMs: 2500 });
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      if (!isTransientError(error) || attempt === retries) {
+        throw error;
+      }
+      await wait(2000);
+      await pingBackend({ retries: 1, delayMs: 1500 });
+    }
+  }
+
+  throw new Error('Request failed');
+};
+
 // Add token to requests
 api.interceptors.request.use(
   (config) => {
@@ -56,25 +86,57 @@ api.interceptors.response.use(
 // Auth API calls
 export const authAPI = {
   signup: (username, email, password, confirmPassword) =>
-    api.post('/auth/signup', { username, email, password, confirmPassword }),
+    performAuthRequest(() => api.post(
+      '/auth/signup',
+      { username, email, password, confirmPassword },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS }
+    )),
   verifyOTP: (email, otp) =>
-    api.post('/auth/verify-otp', { email, otp }),
+    performAuthRequest(() => api.post(
+      '/auth/verify-otp',
+      { email, otp },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS }
+    )),
   resendOTP: (email) =>
-    api.post('/auth/resend-otp', { email }),
+    performAuthRequest(() => api.post(
+      '/auth/resend-otp',
+      { email },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS }
+    )),
   forgotPassword: (email) =>
-    api.post('/auth/forgot-password', { email }),
+    performAuthRequest(() => api.post(
+      '/auth/forgot-password',
+      { email },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS }
+    )),
   resetPassword: (email, otp, newPassword) =>
-    api.post('/auth/reset-password', { email, otp, newPassword }),
+    performAuthRequest(() => api.post(
+      '/auth/reset-password',
+      { email, otp, newPassword },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS }
+    )),
   checkUsername: (username) =>
-    api.post('/auth/check-username', { username }),
+    performAuthRequest(() => api.post(
+      '/auth/check-username',
+      { username },
+      { timeout: 20000 }
+    )),
   checkEmail: (email) =>
-    api.post('/auth/check-email', { email }),
+    performAuthRequest(() => api.post(
+      '/auth/check-email',
+      { email },
+      { timeout: 20000 }
+    )),
   signin: (email, password, rememberMe = false) =>
-    api.post('/auth/signin', { email, password, rememberMe }),
+    performAuthRequest(() => api.post(
+      '/auth/signin',
+      { email, password, rememberMe },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS }
+    )),
   logout: () =>
     api.post('/auth/logout'),
   getCurrentUser: () =>
-    api.get('/auth/me')
+    performAuthRequest(() => api.get('/auth/me', { timeout: 25000 }), { retries: 0, wakeRetries: 1 })
 };
 
 // Message API calls

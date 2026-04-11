@@ -25,6 +25,16 @@ const isTokenExpired = (token) => {
   }
 };
 
+const mapAuthError = (error) => {
+  if (error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')) {
+    return {
+      message: 'Server is waking up. Please wait a few seconds and try again.'
+    };
+  }
+
+  return error?.response?.data || error;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -88,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       connectSocket(newUser._id);
       return newUser;
     } catch (error) {
-      throw error.response?.data || error;
+      throw mapAuthError(error);
     }
   };
 
@@ -102,7 +112,7 @@ export const AuthProvider = ({ children }) => {
       connectSocket(newUser._id);
       return newUser;
     } catch (error) {
-      throw error.response?.data || error;
+      throw mapAuthError(error);
     }
   };
 
@@ -122,7 +132,7 @@ export const AuthProvider = ({ children }) => {
       connectSocket(newUser._id);
       return newUser;
     } catch (error) {
-      throw error.response?.data || error;
+      throw mapAuthError(error);
     }
   };
 
