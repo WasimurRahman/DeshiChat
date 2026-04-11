@@ -19,8 +19,18 @@ exports.checkEmail = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.json({ available: false, message: 'Email is already taken' });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser && existingUser.isVerified) {
+      return res.json({ available: false, message: 'Email is already taken' });
+    }
+
+    // Unverified users can resume signup with the same email.
+    if (existingUser && !existingUser.isVerified) {
+      return res.json({ available: true, message: 'Email has a pending signup. Continue to receive a new OTP.' });
+    }
+
     res.json({ available: true, message: 'Email is available' });
   } catch (error) {
     res.status(500).json({ message: 'Server error during email check' });
@@ -32,8 +42,18 @@ exports.checkUsername = async (req, res) => {
   try {
     const { username } = req.body;
     if (!username) return res.status(400).json({ message: 'Username is required' });
-    const existingUser = await User.findOne({ username });
-    if (existingUser) return res.json({ available: false, message: 'Username is already taken' });
+    const normalizedUsername = username.trim();
+    const existingUser = await User.findOne({ username: normalizedUsername });
+
+    if (existingUser && existingUser.isVerified) {
+      return res.json({ available: false, message: 'Username is already taken' });
+    }
+
+    // Unverified users can resume signup with the same username.
+    if (existingUser && !existingUser.isVerified) {
+      return res.json({ available: true, message: 'Username has a pending signup. Continue to receive a new OTP.' });
+    }
+
     res.json({ available: true, message: 'Username is available' });
   } catch (error) {
     res.status(500).json({ message: 'Server error during username check' });
@@ -49,22 +69,65 @@ exports.signup = async (req, res) => {
     if (!validator.isEmail(email)) return res.status(400).json({ message: 'Invalid email address' });
     if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
-    let user = await User.findOne({ $or: [{ email }, { username }] });
-    if (user) return res.status(400).json({ message: 'User already exists' });
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUsername = username.trim();
+
+    const [emailUser, usernameUser] = await Promise.all([
+      User.findOne({ email: normalizedEmail }),
+      User.findOne({ username: normalizedUsername })
+    ]);
+
+    if (emailUser && emailUser.isVerified) {
+      return res.status(400).json({ message: 'Email is already registered' });
+    }
+
+    if (usernameUser && usernameUser.isVerified) {
+      return res.status(400).json({ message: 'Username is already taken' });
+    }
+
+    if (emailUser && usernameUser && !emailUser._id.equals(usernameUser._id)) {
+      return res.status(409).json({
+        message: 'This email/username combination conflicts with pending accounts. Try different credentials or use signin/resend OTP.'
+      });
+    }
+
+    const existingUnverifiedUser = emailUser || usernameUser || null;
+    const isExistingUnverified = !!existingUnverifiedUser;
 
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    user = new User({ username, email, password, isVerified: false, otp, otpExpires });
-    await user.save();
+    let user = existingUnverifiedUser;
 
-    await sendEmail({
-      to: email,
-      subject: 'Verify your DeshiChat Account',
-      text: `Welcome to DeshiChat! Your verification code is: ${otp}. It expires in 10 minutes.`
-    });
+    if (user) {
+      user.username = normalizedUsername;
+      user.email = normalizedEmail;
+      user.password = password;
+      user.isVerified = false;
+      user.otp = otp;
+      user.otpExpires = otpExpires;
+      await user.save();
+    } else {
+      user = new User({ username: normalizedUsername, email: normalizedEmail, password, isVerified: false, otp, otpExpires });
+      await user.save();
+    }
 
-    res.status(201).json({ message: 'Registration successful. Please verify your email.', requiresVerification: true, email });
+    try {
+      await sendEmail({
+        to: normalizedEmail,
+        subject: 'Verify your DeshiChat Account',
+        text: `Welcome to DeshiChat! Your verification code is: ${otp}. It expires in 10 minutes.`
+      });
+    } catch (mailError) {
+      // Roll back only newly created users to avoid dead one-off accounts.
+      if (!isExistingUnverified) {
+        await User.findByIdAndDelete(user._id);
+      }
+      console.error('Signup email error:', mailError);
+      return res.status(503).json({ message: 'Unable to send OTP right now. Please try signup again in a moment.' });
+    }
+
+    res.status(201).json({ message: 'Registration successful. Please verify your email.', requiresVerification: true, email: normalizedEmail });
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ message: 'Server error during signup' });
@@ -77,7 +140,9 @@ exports.verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.isVerified) return res.status(400).json({ message: 'User is already verified' });
     if (user.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
@@ -102,7 +167,9 @@ exports.resendOTP = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.isVerified) return res.status(400).json({ message: 'User is already verified' });
 
@@ -112,7 +179,7 @@ exports.resendOTP = async (req, res) => {
     await user.save();
 
     await sendEmail({
-      to: email,
+      to: normalizedEmail,
       subject: 'Your new Verification Code',
       text: `Your new verification code is: ${otp}. It expires in 10 minutes.`
     });
@@ -129,7 +196,9 @@ exports.signin = async (req, res) => {
     const { email, password, rememberMe } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -140,11 +209,11 @@ exports.signin = async (req, res) => {
       user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
       await sendEmail({
-        to: email,
+        to: normalizedEmail,
         subject: 'Verify your DeshiChat Account',
         text: `Your verification code is: ${otp}. It expires in 10 minutes.`
       });
-      return res.status(403).json({ message: 'Email not verified. A new OTP has been sent.', requiresVerification: true, email });
+      return res.status(403).json({ message: 'Email not verified. A new OTP has been sent.', requiresVerification: true, email: normalizedEmail });
     }
 
     const token = generateToken(user._id, rememberMe || false);
@@ -163,7 +232,9 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const otp = generateOTP();
@@ -172,7 +243,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     await sendEmail({
-      to: email,
+      to: normalizedEmail,
       subject: 'Password Reset Code',
       text: `Your password reset code is: ${otp}. It expires in 10 minutes.`
     });
@@ -190,7 +261,9 @@ exports.resetPassword = async (req, res) => {
     if (!email || !otp || !newPassword) return res.status(400).json({ message: 'Email, OTP, and new password are required' });
     if (newPassword.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
     if (user.otpExpires < new Date()) return res.status(400).json({ message: 'OTP has expired' });
