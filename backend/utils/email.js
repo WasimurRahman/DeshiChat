@@ -1,8 +1,8 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 
-const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 30000);
-const SMTP_RETRIES = Number(process.env.SMTP_RETRIES || 2);
+const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 12000);
+const SMTP_RETRIES = Number(process.env.SMTP_RETRIES || 1);
 
 // Render frequently fails on IPv6 SMTP routes; prefer IPv4 results.
 if (typeof dns.setDefaultResultOrder === 'function') {

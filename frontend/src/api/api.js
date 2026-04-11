@@ -60,7 +60,6 @@ const isTransientError = (error) => {
     error?.code === 'ECONNABORTED' ||
     !error?.response ||
     status === 502 ||
-    status === 503 ||
     status === 504
   );
 };
