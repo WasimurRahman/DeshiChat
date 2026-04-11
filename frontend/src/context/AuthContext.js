@@ -32,6 +32,16 @@ const mapAuthError = (error) => {
     };
   }
 
+  if (!error?.response) {
+    return {
+      message: 'Network error. Please check your internet and try again.'
+    };
+  }
+
+  if (typeof error.response?.data === 'string') {
+    return { message: error.response.data };
+  }
+
   return error?.response?.data || error;
 };
 

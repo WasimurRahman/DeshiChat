@@ -23,6 +23,15 @@ const Signup = () => {
   const { signup, verifyOTP } = useAuth();
   const navigate = useNavigate();
 
+  const parseErrorMessage = (err, fallback) => {
+    if (!err) return fallback;
+    if (typeof err === 'string') return err;
+    if (err.message) return err.message;
+    if (typeof err.response?.data === 'string') return err.response.data;
+    if (err.response?.data?.message) return err.response.data.message;
+    return fallback;
+  };
+
   useEffect(() => {
     const trimmedUsername = username.trim();
     if (trimmedUsername.length === 0) {
@@ -124,7 +133,7 @@ const Signup = () => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.message || 'Action failed');
+      setError(parseErrorMessage(err, 'Action failed'));
     } finally {
       setLoading(false);
     }
@@ -137,7 +146,7 @@ const Signup = () => {
       await authAPI.resendOTP(email);
       setError('A new OTP has been sent successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend OTP');
+      setError(parseErrorMessage(err, 'Failed to resend OTP'));
     } finally {
       setLoading(false);
     }

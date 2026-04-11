@@ -9,15 +9,25 @@ const apiLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
     // Don't count health check requests
-    return req.path === '/api/health';
+    return req.path === '/health' || req.originalUrl === '/api/health';
   }
 });
 
 // Auth limiter - strict limits for login/signup
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: 'Too many login/signup attempts, please try again after 15 minutes.',
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: 'Too many login attempts, please try again after 15 minutes.',
+  skipSuccessfulRequests: true, // Don't count successful requests
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Signup/OTP limiter - allow retries for cold starts and delivery issues
+const signupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many signup or OTP attempts. Please try again after 15 minutes.',
   skipSuccessfulRequests: true, // Don't count successful requests
   standardHeaders: true,
   legacyHeaders: false
@@ -52,6 +62,7 @@ const searchLimiter = rateLimit({
 module.exports = {
   apiLimiter,
   authLimiter,
+  signupLimiter,
   messageLimiter,
   searchLimiter
 };

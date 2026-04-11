@@ -247,17 +247,8 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, async () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
-  // warmup ping
-  try {
-    const axios = require("axios");
-    await axios.get("https://deshichat-backend.onrender.com/api/health");
-    console.log("Warmup request completed");
-  } catch (err) {
-    console.log("Warmup request failed");
-  }
 });
 
 /*
